@@ -1,23 +1,34 @@
 <?php
 
-class NS_Breadcrumbs2 {
+/**
+ * Class NS_Breadcrumbs
+ *
+ * Class for building WordPress breadcrumbs
+ *
+ * @author Aleksandr Nevidomsky (neviksasha)
+ * @version 0.2
+ * @source https://github.com/neviksasha/ns-breadcrumbs
+ *
+ */
+class NS_Breadcrumbs  {
 
     static $strings = array(
-        'home' => 'Головна',
-        'author' => 'Архив автора %s',
-        '404' => 'Страница не существует',
+        'home'      => 'Головна',
+        'author'    => 'Архив автора %s',
+        '404'       => 'Сторінка не існує',
+        'paged'     => 'Сторінка %s із %s',
     );
 
     static $param = array(
-        'show_on_front' => false,
-        'show_front' => true,
-        'show_current' => true,
-        'show_pt_in_term' => true,
-        'show_pt_in_single' => true,
-        'show_term_in_single' => true,
-//        'post_types' => array( 'post', 'portfolio' ),
-        'post_types' => array( 'portfolio' ),
-        'taxonomies' => array( 'category', 'portfolio_category' ),
+        'show_on_front'         => false,
+        'show_front'            => true,
+        'show_current'          => true,
+        'show_pt_in_term'       => true,
+        'show_pt_in_single'     => true,
+        'show_term_in_single'   => true,
+//        'post_types'            => array( 'post', 'portfolio' ),
+        'post_types'            => array( 'portfolio' ),
+        'taxonomies'            => array( 'category', 'portfolio_category' ),
         'bc_sep' => '<span class="sep">»</span>',
         'bc_before' => '<div class="breadcrumbs" itemscope="" itemtype="http://schema.org/BreadcrumbList">',
         'bc_after' => '</div>',
@@ -25,6 +36,9 @@ class NS_Breadcrumbs2 {
         'elem_last' => '<span class="breadcrumbs-name breadcrumbs-last">%s</span><meta itemprop="position" content="%s">',
     );
 
+//    public function __construct() {
+//
+//    }
 
     public function build() {
 
@@ -49,15 +63,15 @@ class NS_Breadcrumbs2 {
 
     public function get_crumbs() {
 
-        global $post;
+        global $post, $wp_query;
 
-        $siteurl = get_site_url();
+//        $siteurl = get_site_url();
 
         $output_array = array();
 
         /* add home link  */
         if ( !is_front_page() && self::$param['show_front'] == true ) {
-            $output_array[] = array( 'title' => self::$strings['home'], 'url' => $siteurl, 'position' => 0 );
+            $output_array[] = array( 'title' => self::$strings['home'], 'url' => get_site_url(), 'position' => 0 );
         }
 
         /* if page and no parents */
@@ -89,11 +103,12 @@ class NS_Breadcrumbs2 {
         if ( is_archive() ) {
 
             $q = get_queried_object();
+//            var_dump($q);
             $i = 1;
 
             /* check if post type */
-            if ( is_post_type_archive( self::$param['post_types'] ) && self::$param['show_current'] = true ) {
-                $output_array[] = array( 'title' => $q->label, 'url' => '', 'position' => $i );
+            if ( is_post_type_archive( self::$param['post_types'] ) && self::$param['show_current'] == true ) {
+                $output_array[] = array( 'title' => $q->label, 'url' => get_post_type_archive_link( $q->name ), 'position' => $i );
             }
             /* check if post type */
             if ( is_tax() || is_category() ) {
@@ -168,17 +183,23 @@ class NS_Breadcrumbs2 {
 
         }
 
-        //TODO добавить пагинацию, страницы архивов по датам, вложениям, тегам, поиск+посттипы, 404, пагинация и тд
+        /* if is paginated page */
+        if ( is_paged() ) {
+
+            $output_array[] = array( 'title' => sprintf( self::$strings['paged'], $wp_query->query_vars['paged'], $wp_query->max_num_pages ), 'url' => '', 'position' => $i );
+        }
+
+        //добавить страницы архивов по датам, вложениям, тегам, поиск+посттипы, 404, пагинация и тд
 
         return $output_array;
     }
 
     private function get_terms( $term_id, $taxonomy, &$i ) : array {
 
-        $ancestors = get_ancestors($term_id, $taxonomy);
-        $ancestors = array_reverse($ancestors);
-        foreach ($ancestors as $ancestor) {
-            $s_term = get_term($ancestor, $taxonomy);
+        $ancestors = get_ancestors( $term_id, $taxonomy );
+        $ancestors = array_reverse( $ancestors );
+        foreach ( $ancestors as $ancestor ) {
+            $s_term = get_term( $ancestor, $taxonomy );
             $output_array[] = array( 'title' => $s_term->name, 'url' => get_term_link( $ancestor ), 'position' => $i );
             $i++;
         }
