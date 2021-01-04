@@ -6,7 +6,7 @@
  * Class for building WordPress breadcrumbs
  *
  * @author Aleksandr Nevidomsky (neviksasha)
- * @version 0.2
+ * @version 0.3
  * @source https://github.com/neviksasha/ns-breadcrumbs
  *
  */
@@ -57,7 +57,7 @@ class NS_Breadcrumbs  {
 
         $output .= self::$param['bc_after'];
 
-        echo $output;
+        return $output;
 
     }
 
@@ -65,25 +65,23 @@ class NS_Breadcrumbs  {
 
         global $post, $wp_query;
 
-//        $siteurl = get_site_url();
-
         $output_array = array();
 
+        $i = 1;
+
         /* add home link  */
-        if ( !is_front_page() && self::$param['show_front'] == true ) {
+        if ( !$wp_query->is_front_page() && self::$param['show_front'] == true ) {
             $output_array[] = array( 'title' => self::$strings['home'], 'url' => get_site_url(), 'position' => 0 );
         }
 
         /* if page and no parents */
-        if ( is_page() && !$post->post_parent ) {
+        if ( $wp_query->is_page() && !$post->post_parent ) {
             if ( self::$param['show_current'] == true ) {
-                $output_array[] = array( 'title' => $post->post_title, 'url' => '', 'position' => 1 );
+                $output_array[] = array( 'title' => $post->post_title, 'url' => '', 'position' => $i );
             }
         }
         /* if page and has parents */
-        if ( is_page() && $post->post_parent ) {
-
-            $i = 1;
+        if ( $wp_query->is_page() && $post->post_parent ) {
 
             $ancestors = get_ancestors( $post->ID, 'page' );
             $ancestors = array_reverse( $ancestors );
@@ -100,18 +98,17 @@ class NS_Breadcrumbs  {
         }
 
         /* check if archive page */
-        if ( is_archive() ) {
+        if ( $wp_query->is_archive() ) {
 
             $q = get_queried_object();
 //            var_dump($q);
-            $i = 1;
 
             /* check if post type */
-            if ( is_post_type_archive( self::$param['post_types'] ) && self::$param['show_current'] == true ) {
+            if ( $wp_query->is_post_type_archive( self::$param['post_types'] ) && self::$param['show_current'] == true ) {
                 $output_array[] = array( 'title' => $q->label, 'url' => get_post_type_archive_link( $q->name ), 'position' => $i );
             }
             /* check if post type */
-            if ( is_tax() || is_category() ) {
+            if ( $wp_query->is_tax() || $wp_query->is_category() ) {
 
                 /* if need to add post type name to breadcrumbs*/
                 if ( self::$param['show_pt_in_term'] == true && is_object_in_taxonomy( self::$param['post_types'], $q->taxonomy ) ) {
@@ -137,16 +134,14 @@ class NS_Breadcrumbs  {
 
             }
             /*if is author archive*/
-            if ( is_author() ) {
+            if ( $wp_query->is_author() ) {
                 $output_array[] = array( 'title' => sprintf( self::$strings['author'], $q->display_name ), 'url' => '', 'position' => $i );
             }
 
         }
 
         /*if single page*/
-        if ( is_single() ) {
-
-            $i = 1;
+        if ( $wp_query->is_single() ) {
 
             /* if show post type name on single */
             if ( self::$param['show_pt_in_single'] == true && in_array( $post->post_type, self::$param['post_types'] ) ) {
@@ -184,12 +179,19 @@ class NS_Breadcrumbs  {
         }
 
         /* if is paginated page */
-        if ( is_paged() ) {
+        if ( $wp_query->is_paged() ) {
 
             $output_array[] = array( 'title' => sprintf( self::$strings['paged'], $wp_query->query_vars['paged'], $wp_query->max_num_pages ), 'url' => '', 'position' => $i );
+
         }
 
-        //добавить страницы архивов по датам, вложениям, тегам, поиск+посттипы, 404, пагинация и тд
+        /* if 404 page */
+        if ( $wp_query->is_404() ) {
+
+            $output_array[] = array( 'title' => self::$strings['404'], 'url' => '', 'position' => $i );
+
+        }
+        //добавить страницы архивов по датам, вложениям, тегам, поиск+посттипы и тд
 
         return $output_array;
     }
